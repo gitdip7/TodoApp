@@ -33,7 +33,7 @@ namespace TodoApp.Controllers
             return Ok(tasks);
         }
 
-        [HttpGet("Id" , Name ="GetTask")]
+        [HttpGet("Name" , Name ="GetTask")]
         public ActionResult GetTaskByName(string name)
         {
             if (name.Length == 0)
@@ -45,7 +45,7 @@ namespace TodoApp.Controllers
             int id = int.Parse(uid.Value);
             List<Tasks> tasks = _db.Tasks.Where(t => t.UserId == id).ToList();
             
-            Tasks task = tasks.FirstOrDefault(t => t.TaskName == name);
+            Tasks task = tasks.FirstOrDefault(t => t.TaskName.ToLower() == name.ToLower());
             if (task == null)
             {
                 ModelState.AddModelError("CustomError", "Task With this :"+name+" is not Exists");
@@ -100,11 +100,11 @@ namespace TodoApp.Controllers
             var uid = HttpContext.User.FindFirst("uid");
             List<Tasks> tasks = _db.Tasks.Where(t => t.UserId == int.Parse(uid.Value)).ToList();
 
-            var task = tasks.FirstOrDefault(t => t.TaskName == name);
+            var task = tasks.FirstOrDefault(t => t.TaskName.ToLower() == name.ToLower());
 
             if(task == null)
             {
-                return NotFound();
+                return BadRequest("Task that you want to delete is not exist");
             }
 
             _db.Remove(task);
@@ -121,19 +121,22 @@ namespace TodoApp.Controllers
             }
             
             var uid = HttpContext.User.FindFirst("uid");
-            var tasks = _db.Tasks.Where(t => t.UserId == int.Parse(uid.Value));
+            var tasks = _db.Tasks.AsNoTracking().Where(t => t.UserId == int.Parse(uid.Value));
 
-            var task = tasks.AsNoTracking().FirstOrDefault(t => t.TaskName == name);
 
-            if (task == null)
+            if (tasks.FirstOrDefault(t => t.TaskName.ToLower() == name.ToLower()) == null)
             {
                 return BadRequest("Task that you want to update is not exist");
             }
-
-            if (tasks.Where(t => t.TaskName == utask.name) != null)
+            Console.WriteLine(utask.name);
+            var ExistingTask = tasks.Where(t => t.TaskName.ToLower() == utask.name.ToLower());
+            Console.WriteLine("this is new task "+ ExistingTask.Count());
+            if (ExistingTask.Count() != 0)
             {
                 return BadRequest("New Task Name Already exist");
             }
+            ExistingTask.AsNoTracking();
+            var task = tasks.AsNoTracking().FirstOrDefault(t => t.TaskName.ToLower() == name.ToLower());
 
             Tasks model = new()
             {
